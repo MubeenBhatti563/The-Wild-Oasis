@@ -63,6 +63,10 @@ const GlobalStyles = createGlobalStyle`
     transition: background-color 0.3s, border 0.3s;
 }
 
+*:disabled {
+    cursor: not-allowed;
+}
+
 html {
     font-size: 62.5%;
 }
