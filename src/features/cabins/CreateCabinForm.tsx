@@ -1,40 +1,45 @@
-import { useForm } from "react-hook-form";
+import { useForm, type FieldErrors } from "react-hook-form";
 
 import styled from "styled-components";
 import Input from "../../ui/Input";
 import Button from "../../ui/Button";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { insertCabin } from "../../services/apiCabins";
+import toast from "react-hot-toast";
+import Spinner from "../../ui/Spinner";
+import FormRow from "../../ui/FormRow";
 
-const FormRow = styled.div`
-  display: grid;
-  align-items: center;
-  grid-template-columns: 24rem 1fr 1.2fr;
-  gap: 2.4rem;
+// const FormRow = styled.div`
+//   display: grid;
+//   align-items: center;
+//   grid-template-columns: 24rem 1fr 1.2fr;
+//   gap: 2.4rem;
 
-  padding: 1.2rem 0;
+//   padding: 1.2rem 0;
 
-  &:first-child {
-    padding-top: 0;
-  }
+//   &:first-child {
+//     padding-top: 0;
+//   }
 
-  &:last-child {
-    padding-bottom: 0;
-  }
+//   &:last-child {
+//     padding-bottom: 0;
+//   }
 
-  &:has(button) {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1.2rem;
-  }
-`;
+//   &:has(button) {
+//     display: flex;
+//     justify-content: flex-end;
+//     gap: 1.2rem;
+//   }
+// `;
 
-const Label = styled.label`
-  font-weight: 500;
-`;
+// const Label = styled.label`
+//   font-weight: 500;
+// `;
 
-const Error = styled.span`
-  font-size: 1.4rem;
-  color: var(--color-red-700);
-`;
+// const Error = styled.span`
+//   font-size: 1.4rem;
+//   color: var(--color-red-700);
+// `;
 
 // Beautiful wrapper container for clean dashboard forms
 const Form = styled.form`
@@ -73,53 +78,132 @@ interface FormInputs {
   regularPrice: number;
   discount: number;
   description: string;
-  cabinImage: FileList; // Files from an <input type="file" /> come as a FileList array
+  image: string;
 }
 
 const CreateCabinForm = () => {
-  const { register, handleSubmit } = useForm<FormInputs>();
+  const { register, handleSubmit, reset, getValues, formState } =
+    useForm<FormInputs>({
+      defaultValues: { discount: 0, image: "" },
+    });
+
+  const { errors } = formState;
+  const queryClient = useQueryClient();
+
+  const { mutate, status } = useMutation({
+    mutationFn: insertCabin,
+    onSuccess: () => {
+      toast.success("Successfully created a cabin!");
+      queryClient.invalidateQueries({
+        queryKey: ["cabin"],
+      });
+      reset();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const isLoading = status === "pending";
 
   const onSubmit = (data: FormInputs) => {
-    console.log(data);
+    mutate({
+      name: data.name,
+      maxCapacity: data.maxCapacity,
+      regularPrice: data.regularPrice,
+      discount: data.discount,
+      description: data.description,
+      image: data.image?.trim() || null,
+    });
+  };
+
+  const onError = (errors: FieldErrors<FormInputs>) => {
+    console.log("Validation Failed:", errors);
+
+    if (errors.name) {
+      console.log(errors.name.message);
+    }
   };
 
   return (
-    <Form onSubmit={handleSubmit(onSubmit)}>
-      <FormRow>
-        <Label htmlFor="name">Cabin name</Label>
-        <Input type="text" id="name" {...register("name")} />
+    <Form onSubmit={handleSubmit(onSubmit, onError)}>
+      {/* Clean text label + matched ids */}
+      <FormRow label="Cabin name" id="name" errors={errors?.name?.message}>
+        <Input
+          type="text"
+          id="name"
+          disabled={isLoading}
+          {...register("name", { required: "This field is required!" })}
+        />
       </FormRow>
 
-      <FormRow>
-        <Label htmlFor="maxCapacity">Maximum capacity</Label>
-        <Input type="number" id="maxCapacity" {...register("maxCapacity")} />
+      <FormRow
+        id="maxCapacity"
+        label="Maximum capacity"
+        errors={errors?.maxCapacity?.message}
+      >
+        <Input
+          type="number"
+          id="maxCapacity"
+          disabled={isLoading}
+          {...register("maxCapacity", {
+            valueAsNumber: true,
+            required: "This field is required!",
+            min: {
+              value: 1,
+              message: "Capacity should be at least 1",
+            },
+          })}
+        />
       </FormRow>
 
-      <FormRow>
-        <Label htmlFor="regularPrice">Regular price</Label>
-        <Input type="number" id="regularPrice" {...register("regularPrice")} />
+      <FormRow
+        id="regularPrice"
+        label="Regular price"
+        errors={errors?.regularPrice?.message}
+      >
+        <Input
+          type="number"
+          id="regularPrice"
+          disabled={isLoading}
+          {...register("regularPrice", {
+            valueAsNumber: true,
+            required: "This field is required!",
+          })}
+        />
       </FormRow>
 
-      <FormRow>
-        <Label htmlFor="discount">Discount</Label>
+      <FormRow
+        id="discount"
+        label="Discount"
+        errors={errors?.discount?.message}
+      >
         <Input
           type="number"
           id="discount"
           defaultValue={0}
-          {...register("discount")}
+          disabled={isLoading}
+          {...register("discount", {
+            valueAsNumber: true,
+            validate: (value) =>
+              value <= getValues().regularPrice ||
+              "Discount should be less than regular price",
+          })}
         />
       </FormRow>
 
-      <FormRow>
-        <Label htmlFor="description">Description for website</Label>
+      <FormRow
+        id="description"
+        label="Description for website"
+        errors={errors?.description?.message}
+      >
         <Textarea id="description" {...register("description")} />
-        <Error></Error>
       </FormRow>
 
-      <FormRow>
-        <Label htmlFor="cabinImage">Cabin photo</Label>
-        <Input type="file" id="cabinImage" {...register("cabinImage")} />
-        <Error></Error>
+      <FormRow
+        id="image"
+        label="Cabin photo URL"
+        errors={errors?.image?.message}
+      >
+        <Input type="text" id="image" {...register("image")} />
       </FormRow>
 
       <FormRow>
@@ -130,8 +214,8 @@ const CreateCabinForm = () => {
         >
           Cancel
         </Button>
-        <Button $variation="primary" type="submit">
-          Create cabin
+        <Button disabled={isLoading} $variation="primary" type="submit">
+          {isLoading ? <Spinner /> : "Create cabin"}
         </Button>
       </FormRow>
     </Form>
