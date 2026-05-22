@@ -8,6 +8,7 @@ import { insertCabin } from "../../services/apiCabins";
 import toast from "react-hot-toast";
 import Spinner from "../../ui/Spinner";
 import FormRow from "../../ui/FormRow";
+import FileInput from "../../ui/FileInput";
 
 // const FormRow = styled.div`
 //   display: grid;
@@ -78,13 +79,13 @@ interface FormInputs {
   regularPrice: number;
   discount: number;
   description: string;
-  image: string;
+  image: FileList;
 }
 
 const CreateCabinForm = () => {
   const { register, handleSubmit, reset, getValues, formState } =
     useForm<FormInputs>({
-      defaultValues: { discount: 0, image: "" },
+      defaultValues: { discount: 0 },
     });
 
   const { errors } = formState;
@@ -111,7 +112,7 @@ const CreateCabinForm = () => {
       regularPrice: data.regularPrice,
       discount: data.discount,
       description: data.description,
-      image: data.image?.trim() || null,
+      image: data.image[0],
     });
   };
 
@@ -198,12 +199,13 @@ const CreateCabinForm = () => {
         <Textarea id="description" {...register("description")} />
       </FormRow>
 
-      <FormRow
-        id="image"
-        label="Cabin photo URL"
-        errors={errors?.image?.message}
-      >
-        <Input type="text" id="image" {...register("image")} />
+      <FormRow id="image" label="Cabin photo" errors={errors?.image?.message}>
+        <FileInput
+          accept="image/*"
+          id="image"
+          disabled={isLoading}
+          {...register("image", { required: "A cabin photo is required!" })}
+        />
       </FormRow>
 
       <FormRow>
