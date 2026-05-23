@@ -5,6 +5,8 @@ import { deleteCabin } from "../../services/apiCabins";
 import Spinner from "../../ui/Spinner";
 import toast from "react-hot-toast";
 import Button from "../../ui/Button";
+import { useState } from "react";
+import CreateCabinForm from "./CreateCabinForm";
 
 const TableRow = styled.div`
   display: grid;
@@ -46,6 +48,12 @@ const Discount = styled.div`
   color: var(--color-green-700);
 `;
 
+const LevelButtons = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+`;
+
 interface CabinData {
   id: number;
   created_at: string;
@@ -62,6 +70,7 @@ interface CabinRowProps {
 }
 
 const CabinRow: React.FC<CabinRowProps> = ({ cabin }) => {
+  const [showForm, setShowForm] = useState(false);
   const { id, name, maxCapacity, regularPrice, discount, image } = cabin;
 
   const queryClient = useQueryClient();
@@ -81,21 +90,33 @@ const CabinRow: React.FC<CabinRowProps> = ({ cabin }) => {
   const isLoading = mutation.status === "pending";
 
   return (
-    <TableRow role="row">
-      {image ? <Img src={image} alt={`Cabin ${name}`} /> : <div></div>}
-      <Cabin>{name}</Cabin>
-      <div>Fits up to {maxCapacity} guests</div>
-      <Price>${regularPrice}</Price>
-      {discount ? <Discount>${discount}</Discount> : <span>&mdash;</span>}
-      <Button
-        $variation="danger"
-        $size="medium"
-        disabled={isLoading}
-        onClick={() => mutate(id)}
-      >
-        {isLoading ? <Spinner /> : "Delete"}
-      </Button>
-    </TableRow>
+    <>
+      <TableRow role="row">
+        {image ? <Img src={image} alt={`Cabin ${name}`} /> : <div></div>}
+        <Cabin>{name}</Cabin>
+        <div>Fits up to {maxCapacity} guests</div>
+        <Price>${regularPrice}</Price>
+        {discount ? <Discount>${discount}</Discount> : <span>&mdash;</span>}
+        <LevelButtons>
+          <Button
+            $variation="secondary"
+            $size="small"
+            onClick={() => setShowForm((show) => !show)}
+          >
+            Edit
+          </Button>
+          <Button
+            $variation="danger"
+            $size="small"
+            disabled={isLoading}
+            onClick={() => mutate(id)}
+          >
+            {isLoading ? <Spinner /> : "Delete"}
+          </Button>
+        </LevelButtons>
+      </TableRow>
+      {showForm && <CreateCabinForm cabinToEdit={cabin} />}
+    </>
   );
 };
 
