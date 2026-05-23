@@ -1,46 +1,15 @@
 import { useForm, type FieldErrors } from "react-hook-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 
 import styled from "styled-components";
 import Input from "../../ui/Input";
 import Button from "../../ui/Button";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { insertCabin } from "../../services/apiCabins";
-import toast from "react-hot-toast";
 import Spinner from "../../ui/Spinner";
 import FormRow from "../../ui/FormRow";
 import FileInput from "../../ui/FileInput";
 
-// const FormRow = styled.div`
-//   display: grid;
-//   align-items: center;
-//   grid-template-columns: 24rem 1fr 1.2fr;
-//   gap: 2.4rem;
-
-//   padding: 1.2rem 0;
-
-//   &:first-child {
-//     padding-top: 0;
-//   }
-
-//   &:last-child {
-//     padding-bottom: 0;
-//   }
-
-//   &:has(button) {
-//     display: flex;
-//     justify-content: flex-end;
-//     gap: 1.2rem;
-//   }
-// `;
-
-// const Label = styled.label`
-//   font-weight: 500;
-// `;
-
-// const Error = styled.span`
-//   font-size: 1.4rem;
-//   color: var(--color-red-700);
-// `;
+import { insertCabin } from "../../services/apiCabins";
 
 // Beautiful wrapper container for clean dashboard forms
 const Form = styled.form`
@@ -82,10 +51,37 @@ interface FormInputs {
   image: FileList;
 }
 
-const CreateCabinForm = () => {
+interface CabinData {
+  id: number;
+  created_at: string;
+  name: string | null;
+  description: string | null;
+  image: string | null;
+  maxCapacity: number | null;
+  regularPrice: number | null;
+  discount: number | null;
+}
+
+interface CreateCabinFormProps {
+  cabinToEdit?: CabinData;
+}
+
+const CreateCabinForm = ({ cabinToEdit }: CreateCabinFormProps) => {
+  const editId = cabinToEdit?.id;
+  const editValues = cabinToEdit ?? ({} as CabinData);
+  const isEditSession = Boolean(editId);
+
   const { register, handleSubmit, reset, getValues, formState } =
     useForm<FormInputs>({
-      defaultValues: { discount: 0 },
+      defaultValues: isEditSession
+        ? {
+            name: editValues.name ?? "",
+            maxCapacity: editValues.maxCapacity ?? undefined,
+            regularPrice: editValues.regularPrice ?? undefined,
+            discount: editValues.discount ?? 0,
+            description: editValues.description ?? "",
+          }
+        : { discount: 0 },
     });
 
   const { errors } = formState;
@@ -217,7 +213,13 @@ const CreateCabinForm = () => {
           Cancel
         </Button>
         <Button disabled={isLoading} $variation="primary" type="submit">
-          {isLoading ? <Spinner /> : "Create cabin"}
+          {isLoading ? (
+            <Spinner />
+          ) : isEditSession ? (
+            "Edit cabin"
+          ) : (
+            "Create cabin"
+          )}
         </Button>
       </FormRow>
     </Form>
